@@ -8,7 +8,11 @@ class WeekScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('WeekScreen');
-    final prefix = city.isEmpty ? '' : city;
-    return Center(child: Text('${prefix}\nWeek'));
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [Text('Weekly'), if (city.isNotEmpty) Text(city)],
+      ),
+    );
   }
 }

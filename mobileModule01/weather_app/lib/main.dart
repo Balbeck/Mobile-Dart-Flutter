@@ -1,8 +1,8 @@
 // ... existing code ...
 import 'package:flutter/material.dart';
-import 'package:weather_app/screens/currently_screen.dart'; // Ajoute ces imports
-import 'package:weather_app/screens/today_screen.dart';
-import 'package:weather_app/screens/week_screen.dart';
+import 'screens/currently_screen.dart'; // Ajoute ces imports
+import 'screens/today_screen.dart';
+import 'screens/week_screen.dart';
 import 'widgets/top_bar.dart';
 
 void main() {

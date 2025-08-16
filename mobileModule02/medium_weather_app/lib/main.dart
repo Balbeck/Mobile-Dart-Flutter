@@ -1,9 +1,10 @@
 // ... existing code ...
 import 'package:flutter/material.dart';
-import 'package:weather_app/screens/currently_screen.dart'; // Ajoute ces imports
-import 'package:weather_app/screens/today_screen.dart';
-import 'package:weather_app/screens/week_screen.dart';
+import 'screens/currently_screen.dart';
+import 'screens/today_screen.dart';
+import 'screens/week_screen.dart';
 import 'widgets/top_bar.dart';
+import 'services/location_service.dart';
 
 void main() {
   runApp(MyApp());
@@ -25,13 +26,29 @@ class _HomeState extends State<Home> {
   String city = '';
 
   @override
+  void initState() {
+    super.initState();
+    _fetchLocationOnStart();
+  }
+
+  Future<void> _fetchLocationOnStart() async {
+    String coords = await LocationService.getLocation(context);
+    if (mounted) {
+      setState(() => city = coords);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3, // 3 tabs
       child: Scaffold(
         appBar: TopBar(
           onSearch: (value) => setState(() => city = value.trim()),
-          onGeo: () => setState(() => city = '42_Paris'),
+          onGeo: () async {
+            String location = await LocationService.getLocation(context);
+            setState(() => city = location);
+          },
         ),
 
         body: TabBarView(

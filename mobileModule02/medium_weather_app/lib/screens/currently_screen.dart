@@ -8,7 +8,11 @@ class CurrentlyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('CurrentlyScreen');
-    final prefix = city.isEmpty ? '' : city;
-    return Center(child: Text('${prefix}\nCurrently'));
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [Text('Currently'), if (city.isNotEmpty) Text(city)],
+      ),
+    );
   }
 }

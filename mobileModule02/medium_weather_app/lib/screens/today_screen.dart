@@ -8,7 +8,11 @@ class TodayScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('TodayScreen');
-    final prefix = city.isEmpty ? '' : city;
-    return Center(child: Text('${prefix}\nToday'));
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [Text('Today'), if (city.isNotEmpty) Text(city)],
+      ),
+    );
   }
 }
