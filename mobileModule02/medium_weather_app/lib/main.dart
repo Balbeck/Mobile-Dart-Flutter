@@ -1,4 +1,3 @@
-// ... existing code ...
 import 'package:flutter/material.dart';
 import 'screens/currently_screen.dart';
 import 'screens/today_screen.dart';
@@ -11,6 +10,8 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(home: Home());
@@ -18,6 +19,8 @@ class MyApp extends StatelessWidget {
 }
 
 class Home extends StatefulWidget {
+  const Home({super.key});
+
   @override
   State<Home> createState() => _HomeState();
 }
@@ -44,7 +47,9 @@ class _HomeState extends State<Home> {
       length: 3, // 3 tabs
       child: Scaffold(
         appBar: TopBar(
-          onSearch: (value) => setState(() => city = value.trim()),
+          onCitySelected: (selectedCity) {
+            setState(() => city = selectedCity);
+          },
           onGeo: () async {
             String location = await LocationService.getLocation(context);
             setState(() => city = location);
