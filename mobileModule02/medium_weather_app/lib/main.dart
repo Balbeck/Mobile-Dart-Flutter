@@ -26,7 +26,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  String city = '';
+  String city = 'No City Selected';
 
   @override
   void initState() {
@@ -49,9 +49,11 @@ class _HomeState extends State<Home> {
         appBar: TopBar(
           onCitySelected: (selectedCity) {
             setState(() => city = selectedCity);
+            print('Selected City: $selectedCity');
           },
           onGeo: () async {
             String location = await LocationService.getLocation(context);
+            // String location = await LocationService.getCityByLocation(context);
             setState(() => city = location);
           },
         ),
