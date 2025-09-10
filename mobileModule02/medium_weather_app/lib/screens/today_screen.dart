@@ -31,19 +31,49 @@ class _TodayScreenState extends State<TodayScreen> {
     }
   }
 
+  String? _errorMessage;
+
   Future<void> _fetchWeather() async {
     if (widget.city.name == 'No location') return;
-    setState(() => _loading = true);
-    final weather = await WeatherService.getTodayWeather(widget.city);
     setState(() {
-      _weatherList = weather;
-      _loading = false;
+      _loading = true;
+      _errorMessage = null;
     });
+
+    try {
+      final weather = await WeatherService.getTodayWeather(widget.city);
+      if (mounted) {
+        setState(() {
+          _weatherList = weather;
+          _loading = false;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _weatherList = null;
+          _loading = false;
+          _errorMessage = e.toString();
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     print('Today_Screen / City: [ ${widget.city} ]');
+
+    // Error Search de la city
+    if (widget.city.name == 'Exception_Error') {
+      return Center(
+        child: Text(
+          widget.city.region, // Error msg dans region
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.red, fontSize: 16),
+        ),
+      );
+    }
 
     // Cas ou aucune ville n'est selectionnee
     if (widget.city.name == 'No location' || widget.city.name == 'Unknown') {
@@ -67,6 +97,12 @@ class _TodayScreenState extends State<TodayScreen> {
           const SizedBox(height: 20),
           if (_loading)
             const Center(child: CircularProgressIndicator())
+          else if (_errorMessage != null)
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.red, fontSize: 16),
+            )
           else if (_weatherList == null || _weatherList!.isEmpty)
             const Text('No weather data available')
           else

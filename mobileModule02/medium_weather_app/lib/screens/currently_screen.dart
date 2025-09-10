@@ -14,6 +14,7 @@ class CurrentlyScreen extends StatefulWidget {
 class _CurrentlyScreenState extends State<CurrentlyScreen> {
   CurrentWeather? _weather;
   bool _loading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -33,13 +34,18 @@ class _CurrentlyScreenState extends State<CurrentlyScreen> {
 
   Future<void> _fetchWeather() async {
     if (widget.city.name == 'No Location') return;
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _errorMessage = null; // Reset error message on new fetch
+    });
+
     try {
       final weather = await WeatherService.getCurrentWeather(widget.city);
       if (mounted) {
         setState(() {
           _weather = weather;
           _loading = false;
+          _errorMessage = null;
         });
       }
     } catch (e) {
@@ -47,6 +53,7 @@ class _CurrentlyScreenState extends State<CurrentlyScreen> {
         setState(() {
           _weather = null;
           _loading = false;
+          _errorMessage = e.toString();
         });
       }
     }
@@ -55,6 +62,17 @@ class _CurrentlyScreenState extends State<CurrentlyScreen> {
   @override
   Widget build(BuildContext context) {
     print('CurrentlyScreen / City: [ ${widget.city} ]');
+
+    // Gestion des erreurs du SearchService
+    if (widget.city.name == 'Exception_Error') {
+      return Center(
+        child: Text(
+          widget.city.region, // Le message d'erreur est stocké dans region
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.red, fontSize: 16),
+        ),
+      );
+    }
 
     // Cas ou aucune ville n'est selectionnee
     if (widget.city.name == 'No location' || widget.city.name == 'Unknown') {
@@ -72,6 +90,12 @@ class _CurrentlyScreenState extends State<CurrentlyScreen> {
       child: Center(
         child: _loading
             ? const CircularProgressIndicator()
+            : _errorMessage != null
+            ? Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.red, fontSize: 16),
+              )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

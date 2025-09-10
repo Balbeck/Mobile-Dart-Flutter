@@ -43,37 +43,46 @@ class DailyWeather {
 }
 
 class WeatherService {
-  static Future<CurrentWeather?> getCurrentWeather(City city) async {
-    final url = Uri.parse(
-      'https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}&current_weather=true',
-    );
-    final response = await http.get(url);
+  static Future<CurrentWeather> getCurrentWeather(City city) async {
+    try {
+      final url = Uri.parse(
+        'https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}&current_weather=true',
+      );
+      final response = await http.get(url);
 
-    if (response.statusCode == 200) {
+      if (response.statusCode != 200) {
+        throw Exception('Failed to fetch weather data');
+      }
+
       final data = json.decode(response.body);
       final current = data['current_weather'];
 
-      if (current != null) {
-        return CurrentWeather(
-          temperature: current['temperature']?.toDouble() ?? 0.0,
-          description: _mapWeatherCodeToDescription(
-            current['weathercode'] ?? 0,
-          ),
-          windSpeed: current['windspeed']?.toDouble() ?? 0.0,
-        );
+      if (current == null) {
+        throw Exception('Invalid weather data received');
       }
+
+      return CurrentWeather(
+        temperature: current['temperature']?.toDouble() ?? 0.0,
+        description: _mapWeatherCodeToDescription(current['weathercode'] ?? 0),
+        windSpeed: current['windspeed']?.toDouble() ?? 0.0,
+      );
+    } catch (e) {
+      throw 'The service connection is lost. Please check your internet connection or try again later!';
     }
-    return null;
   }
 
   static Future<List<HourlyWeather>> getTodayWeather(City city) async {
-    final url = Uri.parse(
-      'https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}'
-      '&hourly=temperature_2m,windspeed_10m,weathercode&forecast_days=1&timezone=auto',
-    );
+    try {
+      final url = Uri.parse(
+        'https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}'
+        '&hourly=temperature_2m,windspeed_10m,weathercode&forecast_days=1&timezone=auto',
+      );
 
-    final response = await http.get(url);
-    if (response.statusCode == 200) {
+      final response = await http.get(url);
+      if (response.statusCode != 200) {
+        throw 'The service connection is lost. Please check your internet connection or try again later!';
+      }
+
       final data = json.decode(response.body);
       final times = List<String>.from(data['hourly']['time']);
       final temps = List<dynamic>.from(data['hourly']['temperature_2m']);
@@ -92,18 +101,23 @@ class WeatherService {
         );
       }
       return list;
+    } catch (e) {
+      throw 'The service connection is lost. Please check your internet connection or try again later!';
     }
-    return [];
   }
 
   static Future<List<DailyWeather>> getWeeklyWeather(City city) async {
-    final url = Uri.parse(
-      'https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}'
-      '&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto',
-    );
+    try {
+      final url = Uri.parse(
+        'https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}'
+        '&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto',
+      );
 
-    final response = await http.get(url);
-    if (response.statusCode == 200) {
+      final response = await http.get(url);
+      if (response.statusCode != 200) {
+        throw 'The service connection is lost. Please check your internet connection or try again later!';
+      }
+
       final data = json.decode(response.body);
       final dates = List<String>.from(data['daily']['time']);
       final maxTemps = List<dynamic>.from(data['daily']['temperature_2m_max']);
@@ -122,8 +136,9 @@ class WeatherService {
         );
       }
       return list;
+    } catch (e) {
+      throw 'The service connection is lost. Please check your internet connection or try again later!';
     }
-    return [];
   }
 
   static String _mapWeatherCodeToDescription(int weatherCode) {

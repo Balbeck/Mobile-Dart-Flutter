@@ -21,12 +21,19 @@ class _TopBarState extends State<TopBar> {
   bool _showResults = false;
 
   Future<void> _onSearchChanged(String query) async {
-    if (query.trim().length >= 3) {
-      final results = await SearchService.searchCities(query.trim());
-      setState(() {
-        _searchResults = results;
-        _showResults = true;
-      });
+    if (query.trim().length >= 1) {
+      try {
+        final results = await SearchService.searchCities(query.trim());
+        setState(() {
+          _searchResults = results;
+          _showResults = true;
+        });
+      } catch (e) {
+        setState(() {
+          _searchResults = [];
+          _showResults = false;
+        });
+      }
     } else {
       setState(() => _showResults = false);
     }
@@ -40,7 +47,28 @@ class _TopBarState extends State<TopBar> {
           title: TextField(
             controller: _searchController,
             onChanged: _onSearchChanged,
-            onSubmitted: (value) {
+            onSubmitted: (value) async {
+              if (value.trim().length >= 3) {
+                try {
+                  final results = await SearchService.searchCities(
+                    value.trim(),
+                  );
+                  //si Enter on garde le premier result !
+                  if (results.isNotEmpty) {
+                    widget.onCitySelected(results[0]);
+                  }
+                } catch (e) {
+                  // ErrorCity pour throw l'error
+                  final errorCity = City(
+                    name: 'Exception_Error',
+                    region: e.toString(),
+                    country: '',
+                    latitude: 0,
+                    longitude: 0,
+                  );
+                  widget.onCitySelected(errorCity);
+                }
+              }
               setState(() => _showResults = false);
             },
             decoration: const InputDecoration(

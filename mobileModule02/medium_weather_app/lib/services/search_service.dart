@@ -5,7 +5,7 @@ import '../models/city.dart';
 class SearchService {
   static Future<List<City>> searchCities(String query) async {
     var listLength = 7;
-    if (query.length <= 2) return []; // Min 2 char pour avoid spam API
+    if (query.length <= 1) return []; // Min 2 char pour avoid spam API
     final url = Uri.parse(
       'https://geocoding-api.open-meteo.com/v1/search?name=$query&count=$listLength&language=en&format=json',
     );
@@ -20,7 +20,8 @@ class SearchService {
       if (results.isEmpty) {
         print('Status Code: ${response.statusCode}');
         print('No results found for query: $query');
-        return [];
+        throw 'could not find any result for the supplied address ($query) or coordinates';
+        // return [];
       }
       print("\n\n ***[ Query = $query ]*** ");
       print('Status Code: ${response.statusCode}');
