@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/city.dart';
 
 class SearchService {
-  static Future<List<Map<String, dynamic>>> searchCities(String query) async {
+  static Future<List<City>> searchCities(String query) async {
     var listLength = 7;
-    if (query.length < 3) return []; // Min 3 char pour avoid spam API
+    if (query.length <= 2) return []; // Min 2 char pour avoid spam API
     final url = Uri.parse(
       'https://geocoding-api.open-meteo.com/v1/search?name=$query&count=$listLength&language=en&format=json',
     );
     final response = await http.get(url);
+
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       var results = List<Map<String, dynamic>>.from(data['results'] ?? []);
@@ -30,7 +32,15 @@ class SearchService {
       print('- - - - - -\n');
       ///////////////////////////////////////////////////////////////////////////
 
-      return results;
+      return results.map((result) {
+        return City(
+          name: result['name'],
+          region: result['admin1'],
+          country: result['country'],
+          latitude: result['latitude'],
+          longitude: result['longitude'],
+        );
+      }).toList();
     }
 
     print('Error: ${response.statusCode}');

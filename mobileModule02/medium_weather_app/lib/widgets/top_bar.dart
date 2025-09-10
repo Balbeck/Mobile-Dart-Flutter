@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/search_service.dart';
+import '../models/city.dart';
 
 class TopBar extends StatefulWidget implements PreferredSizeWidget {
-  final ValueChanged<String> onCitySelected;
+  final ValueChanged<City> onCitySelected;
   final VoidCallback onGeo;
 
   const TopBar({super.key, required this.onCitySelected, required this.onGeo});
@@ -16,7 +17,7 @@ class TopBar extends StatefulWidget implements PreferredSizeWidget {
 
 class _TopBarState extends State<TopBar> {
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> _searchResults = [];
+  List<City> _searchResults = [];
   bool _showResults = false;
 
   Future<void> _onSearchChanged(String query) async {
@@ -41,9 +42,6 @@ class _TopBarState extends State<TopBar> {
             onChanged: _onSearchChanged,
             onSubmitted: (value) {
               setState(() => _showResults = false);
-              if (value.trim().isNotEmpty) {
-                widget.onCitySelected(value.trim());
-              }
             },
             decoration: const InputDecoration(
               hintText: 'Search Location...',
@@ -65,13 +63,13 @@ class _TopBarState extends State<TopBar> {
             child: ListView.builder(
               itemCount: _searchResults.length,
               itemBuilder: (context, index) {
-                final result = _searchResults[index];
+                final city = _searchResults[index];
                 return ListTile(
                   title: RichText(
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: "${result['name']},",
+                          text: "${city.name},",
                           style: const TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
@@ -79,20 +77,20 @@ class _TopBarState extends State<TopBar> {
                         ),
                         const TextSpan(text: "  "),
                         TextSpan(
-                          text: "${result['admin1'] ?? ''}",
+                          text: city.region,
                           style: const TextStyle(color: Colors.grey),
                         ),
                         const TextSpan(text: ", "),
                         TextSpan(
-                          text: "${result['country']}",
+                          text: city.country,
                           style: const TextStyle(color: Colors.grey),
                         ),
                       ],
                     ),
                   ),
                   onTap: () {
-                    widget.onCitySelected("${result['name']}");
-                    _searchController.text = result['name'];
+                    widget.onCitySelected(city);
+                    _searchController.text = city.name;
                     setState(() => _showResults = false);
                   },
                 );
