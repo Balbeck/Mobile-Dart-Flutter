@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/currently_screen.dart';
 import 'screens/today_screen.dart';
 import 'screens/week_screen.dart';
 import 'widgets/top_bar.dart';
 import 'widgets/settings_drawer.dart';
 import 'services/location_service.dart';
+import 'services/weather_service.dart';
 import 'package:weather_app/models/city.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -35,12 +38,20 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   String _searchQuery = '';
 
   // ── Background sélectionné (null = aucun) ──
-  String? _selectedBackground = 'assets/background_assets/backgroud_image_weatherApp.jpg';
+  String? _selectedBackground;
+
+  // ── Données météo pré-chargées ──
+  CurrentWeather? _cachedCurrent;
+  List<HourlyWeather>? _cachedToday;
+  List<DailyWeather>? _cachedWeekly;
 
   // ── Contrôle du volet settings ──
   bool _settingsOpen = false;
   late AnimationController _drawerAnimController;
   late Animation<Offset> _drawerSlide;
+
+  // ── Clé pour piloter le clear de la searchbar ──
+  final GlobalKey<TopBarState> _topBarKey = GlobalKey<TopBarState>();
 
   @override
   void initState() {
@@ -53,6 +64,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       latitude: 0.0,
       longitude: 0.0,
     );
+    _loadSavedBackground();
     _fetchLocationOnStart();
 
     _drawerAnimController = AnimationController(
@@ -68,6 +80,30 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     ));
   }
 
+  Future<void> _loadSavedBackground() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey('selected_background')) {
+      final saved = prefs.getString('selected_background');
+      if (mounted) {
+        setState(() {
+          _selectedBackground = (saved == 'none') ? null : saved;
+        });
+      }
+    } else {
+      // Premier lancement : utiliser le default
+      if (mounted) {
+        setState(() {
+          _selectedBackground = 'assets/background_assets/backgroud_image_weatherApp.jpg';
+        });
+      }
+    }
+  }
+
+  Future<void> _saveBackground(String? path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_background', path ?? 'none');
+  }
+
   @override
   void dispose() {
     _drawerAnimController.dispose();
@@ -78,6 +114,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     City cityFromLocation = await LocationService.getCityByLocation(context);
     if (mounted) {
       setState(() => currentCity = cityFromLocation);
+      _fetchAllWeather(cityFromLocation);
     }
   }
 
@@ -86,8 +123,29 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       currentCity = city;
       _searchResults = [];
       _searchQuery = '';
+      _cachedCurrent = null;
+      _cachedToday = null;
+      _cachedWeekly = null;
     });
+    _topBarKey.currentState?.clearSearch();
+    _fetchAllWeather(city);
     print('Selected City: $city');
+  }
+
+  Future<void> _fetchAllWeather(City city) async {
+    if (city.name == 'No location' || city.name == 'Exception_Error') return;
+    final results = await Future.wait([
+      WeatherService.getCurrentWeather(city),
+      WeatherService.getTodayWeather(city),
+      WeatherService.getWeeklyWeather(city),
+    ]);
+    if (mounted) {
+      setState(() {
+        _cachedCurrent = results[0] as CurrentWeather;
+        _cachedToday = results[1] as List<HourlyWeather>;
+        _cachedWeekly = results[2] as List<DailyWeather>;
+      });
+    }
   }
 
   void _openSettings() {
@@ -103,6 +161,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
   void _onBackgroundSelected(String? path) {
     setState(() => _selectedBackground = path);
+    _saveBackground(path);
     _closeSettings();
   }
 
@@ -124,6 +183,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
           backgroundColor: Colors.transparent,
           extendBodyBehindAppBar: true,
           appBar: TopBar(
+            key: _topBarKey,
             onCitySelected: _onCitySelected,
             onSettingsPressed: _openSettings,
             onGeo: () async {
@@ -133,7 +193,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
               setState(() {
                 currentCity = cityFromLocation;
                 _searchResults = [];
+                _cachedCurrent = null;
+                _cachedToday = null;
+                _cachedWeekly = null;
               });
+              _fetchAllWeather(cityFromLocation);
             },
             onResultsChanged: (results) {
               setState(() => _searchResults = results);
@@ -148,9 +212,9 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 // ── Contenu principal ──
                 TabBarView(
                   children: [
-                    CurrentlyScreen(city: currentCity),
-                    TodayScreen(city: currentCity),
-                    WeekScreen(city: currentCity),
+                    CurrentlyScreen(city: currentCity, cachedWeather: _cachedCurrent),
+                    TodayScreen(city: currentCity, cachedWeather: _cachedToday),
+                    WeekScreen(city: currentCity, cachedWeather: _cachedWeekly),
                   ],
                 ),
 

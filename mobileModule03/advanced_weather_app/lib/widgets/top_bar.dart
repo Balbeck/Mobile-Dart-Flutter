@@ -1,22 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/search_service.dart';
 import '../models/city.dart';
 
-// ─────────────────────────────────────────────────────────────
-//  TopBar  — barre de recherche avec bouton hamburger (settings)
-//  La liste de suggestions est exposée via [onResultsChanged]
-//  et affichée en overlay dans main.dart via un Stack.
-// ─────────────────────────────────────────────────────────────
 class TopBar extends StatefulWidget implements PreferredSizeWidget {
   final ValueChanged<City> onCitySelected;
   final VoidCallback onGeo;
   final VoidCallback onSettingsPressed;
-
-  /// Appelé à chaque changement de résultats :
-  /// transmet la liste (vide = fermer l'overlay).
   final ValueChanged<List<City>> onResultsChanged;
-
-  /// Texte courant dans le champ (pour le highlight en gras).
   final ValueChanged<String> onQueryChanged;
 
   const TopBar({
@@ -29,31 +20,59 @@ class TopBar extends StatefulWidget implements PreferredSizeWidget {
   });
 
   @override
-  _TopBarState createState() => _TopBarState();
+  TopBarState createState() => TopBarState();
 
   @override
-  // preferredSize = hauteur de l'AppBar uniquement, sans la liste
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
-class _TopBarState extends State<TopBar> {
+class TopBarState extends State<TopBar> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  int _requestId = 0;
 
-  Future<void> _onSearchChanged(String query) async {
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void clearSearch() {
+    _searchController.clear();
+    _closeResults();
+  }
+
+  void _onSearchChanged(String query) {
     widget.onQueryChanged(query);
-    if (query.trim().length >= 1) {
-      try {
-        final results = await SearchService.searchCities(query.trim());
-        widget.onResultsChanged(results);
-      } catch (_) {
-        widget.onResultsChanged([]);
-      }
-    } else {
+    _debounce?.cancel();
+
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
       widget.onResultsChanged([]);
+      return;
+    }
+
+    _debounce = Timer(const Duration(milliseconds: 200), () {
+      _doSearch(trimmed);
+    });
+  }
+
+  Future<void> _doSearch(String query) async {
+    final id = ++_requestId;
+    try {
+      final results = await SearchService.searchCities(query);
+      // Ignore si une recherche plus récente a été lancée
+      if (id != _requestId) return;
+      widget.onResultsChanged(results);
+    } catch (_) {
+      if (id == _requestId) widget.onResultsChanged([]);
     }
   }
 
   void _closeResults() {
+    _debounce?.cancel();
+    _requestId++;
     widget.onResultsChanged([]);
     widget.onQueryChanged('');
   }
@@ -63,7 +82,6 @@ class _TopBarState extends State<TopBar> {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      // ── Bouton hamburger à gauche ──
       leading: Padding(
         padding: const EdgeInsets.only(left: 8.0),
         child: Container(
@@ -84,7 +102,8 @@ class _TopBarState extends State<TopBar> {
         controller: _searchController,
         onChanged: _onSearchChanged,
         onSubmitted: (value) async {
-          if (value.trim().length >= 3) {
+          _debounce?.cancel();
+          if (value.trim().isNotEmpty) {
             try {
               final results = await SearchService.searchCities(value.trim());
               if (results.isNotEmpty) {
@@ -131,6 +150,7 @@ class _TopBarState extends State<TopBar> {
         IconButton(
           icon: const Icon(Icons.my_location, color: Colors.white),
           onPressed: () {
+            _searchController.clear();
             _closeResults();
             widget.onGeo();
           },

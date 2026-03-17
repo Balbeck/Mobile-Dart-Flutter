@@ -5,8 +5,9 @@ import 'currently_screen_layout.dart';
 
 class CurrentlyScreen extends StatefulWidget {
   final City city;
+  final CurrentWeather? cachedWeather;
 
-  const CurrentlyScreen({super.key, required this.city});
+  const CurrentlyScreen({super.key, required this.city, this.cachedWeather});
 
   @override
   State<CurrentlyScreen> createState() => _CurrentlyScreenState();
@@ -20,6 +21,7 @@ class _CurrentlyScreenState extends State<CurrentlyScreen> {
   @override
   void initState() {
     super.initState();
+    _weather = widget.cachedWeather;
     if (widget.city.name != 'No location') {
       _fetchWeather();
     }
@@ -28,6 +30,9 @@ class _CurrentlyScreenState extends State<CurrentlyScreen> {
   @override
   void didUpdateWidget(CurrentlyScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.cachedWeather != oldWidget.cachedWeather && widget.cachedWeather != null) {
+      _weather = widget.cachedWeather;
+    }
     if (widget.city != oldWidget.city) {
       _fetchWeather();
     }
@@ -36,8 +41,8 @@ class _CurrentlyScreenState extends State<CurrentlyScreen> {
   Future<void> _fetchWeather() async {
     if (widget.city.name == 'No Location') return;
     setState(() {
-      _loading = true;
-      _errorMessage = null; // Reset error message on new fetch
+      _loading = _weather == null;
+      _errorMessage = null;
     });
 
     try {
@@ -52,9 +57,8 @@ class _CurrentlyScreenState extends State<CurrentlyScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _weather = null;
+          if (_weather == null) _errorMessage = e.toString();
           _loading = false;
-          _errorMessage = e.toString();
         });
       }
     }

@@ -5,8 +5,9 @@ import 'today_screen_layout.dart';
 
 class TodayScreen extends StatefulWidget {
   final City city;
+  final List<HourlyWeather>? cachedWeather;
 
-  const TodayScreen({super.key, required this.city});
+  const TodayScreen({super.key, required this.city, this.cachedWeather});
 
   @override
   State<TodayScreen> createState() => _TodayScreenState();
@@ -15,10 +16,12 @@ class TodayScreen extends StatefulWidget {
 class _TodayScreenState extends State<TodayScreen> {
   List<HourlyWeather>? _weatherList;
   bool _loading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    _weatherList = widget.cachedWeather;
     if (widget.city.name != 'No location') {
       _fetchWeather();
     }
@@ -27,17 +30,18 @@ class _TodayScreenState extends State<TodayScreen> {
   @override
   void didUpdateWidget(TodayScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.cachedWeather != oldWidget.cachedWeather && widget.cachedWeather != null) {
+      _weatherList = widget.cachedWeather;
+    }
     if (widget.city != oldWidget.city) {
       _fetchWeather();
     }
   }
 
-  String? _errorMessage;
-
   Future<void> _fetchWeather() async {
     if (widget.city.name == 'No location') return;
     setState(() {
-      _loading = true;
+      _loading = _weatherList == null;
       _errorMessage = null;
     });
 
@@ -53,9 +57,8 @@ class _TodayScreenState extends State<TodayScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _weatherList = null;
+          if (_weatherList == null) _errorMessage = e.toString();
           _loading = false;
-          _errorMessage = e.toString();
         });
       }
     }
